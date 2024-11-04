@@ -5,4 +5,6 @@ module com.example.assignmnent_4_zoo_management_system {
 
     opens com.example.assignmnent_4_zoo_management_system to javafx.fxml;
     exports com.example.assignmnent_4_zoo_management_system;
+    exports com.example.assignmnent_4_zoo_management_system.Controllers;
+    opens com.example.assignmnent_4_zoo_management_system.Controllers to javafx.fxml;
 }
