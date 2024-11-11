@@ -1,5 +1,8 @@
-package com.example.assignmnent_4_zoo_management_system;
+package Controllers;
 
+import Models.Animal;
+import Models.Enclosure;
+import com.example.assignmnent_4_zoo_management_system.ZooApplication;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -9,22 +12,22 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.ListView;
 import javafx.scene.text.Text;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
-import javax.swing.*;
-import javax.swing.text.html.ListView;
-import java.awt.*;
+import java.io.IOException;
 import java.util.Optional;
 
-/*public class EnclosureViewController {
+public class EnclosureViewController {
     @FXML
     private Text enclosureNameText;
 
     @FXML
-    private ListView<String> enclosureAnimalsListView;
+    private ListView<Animal> enclosureAnimalsListView;
 
     @FXML
     private Button addButton;
@@ -38,25 +41,23 @@ import java.util.Optional;
     @FXML
     private Button backButton;
 
-    private ObservableList<String> animalList;
+    private ObservableList<Animal> animalList;
 
-    private Enclosure currentEnclosure;
+    private Enclosure enclosure;
 
-    public void initialize() {
-        enclosureNameText.setText(enclosureName);
-
-        enclosureAnimalsListView.setItems(animalList);
-    }
 
     public void setEnclosure(Enclosure enclosure) {
-        this.currentEnclosure = enclosure;
+        this.enclosure = enclosure;
         enclosureNameText.setText(enclosure.getName()); // Set enclosure name dynamically
-        enclosureAnimalsListView.setItems(FXCollections.observableArrayList(enclosure.getAnimals()));
+
+        // Load animals into the ListView
+        animalList = FXCollections.observableArrayList(enclosure.getAnimals());
+        enclosureAnimalsListView.setItems(animalList);
     }
 
 
     @FXML
-    protected void onAddButtonClick(ActionEvent pEvent) {
+    protected void onAddButtonClick(ActionEvent event) {
         try {
             FXMLLoader fxmlLoader = new FXMLLoader(ZooApplication.class.getResource("animal-view.fxml"));
             Parent view = fxmlLoader.load();
@@ -65,14 +66,15 @@ import java.util.Optional;
             Scene scene = new Scene(view, 500, 500);
             Stage stage = new Stage();
             stage.setScene(scene);
-            stage.setTitle(getSlectedEnclsoure().getName());
+            stage.setTitle(enclosure.getName());
             stage.initModality(Modality.WINDOW_MODAL);
             stage.initOwner(((Node) event.getSource()).getScene().getWindow());
             stage.showAndWait();
 
-            // Refresh ListView after adding
-            enclosureAnimalsListView.setItems(FXCollections.observableArrayList(currentEnclosure.getAnimals()));
-        } catch (Exception e) {
+            // Refresh the animal list after adding a new animal
+            refreshAnimalList();
+
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
@@ -95,13 +97,15 @@ import java.util.Optional;
             Scene nextScene = new Scene(view, 500, 500);
             Stage nextStage = new Stage();
             nextStage.setScene(nextScene);
-            nextStage.setTitle(pEnclosure.getName());
+            nextStage.setTitle(enclosure.getName());
             nextStage.initModality(Modality.WINDOW_MODAL);
             nextStage.initOwner(((Node) pEvent.getSource()).getScene().getWindow());
             nextStage.showAndWait();
 
-            enclosureAnimalsListView.refresh();
-        }catch (Exception e) {
+            // Refresh the animal list after editing an animal
+            refreshAnimalList();
+
+        }catch (IOException e) {
             e.printStackTrace();
         }
     }
@@ -109,33 +113,46 @@ import java.util.Optional;
 
     @FXML
     protected void onDeleteButtonClick(ActionEvent pEvent) {
-        Animal selectedAnimal = enclosureAnimalsListView.getSelectionModel().getSelectedIndex();
+        Animal selectedAnimal = enclosureAnimalsListView.getSelectionModel().getSelectedItem();
 
-        if (selectedAnimal == null) {
-            showAlert("No Selection", "Please select an animal to delete.");
-            return;
-        }
-        Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
-        confirmAlert.setTitle("Confirm Deletion");
-        confirmAlert.setHeaderText("Are you sure you want to delete " + selectedAnimal.getName() + "?");
-        confirmAlert.setContentText("This action cannot be undone.");
+        if (selectedAnimal != null) {
+            // Confirm the deletion with an alert
+            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+            alert.setTitle("Confirm Delete");
+            alert.setHeaderText("Are you sure you want to delete " + selectedAnimal.getName() + "?");
+            alert.setContentText("This action cannot be undone.");
 
-        Optional<ButtonType> result = confirmAlert.showAndWait();
-        if (result.isPresent() && result.get() == ButtonType.OK) {
-            // Remove the animal from the enclosure
-            currentEnclosure.removeAnimal(selectedAnimal);
-
-            // Refresh the ListView
-            enclosureAnimalsListView.setItems(FXCollections.observableArrayList(currentEnclosure.getAnimals()));
-
-            showAlert("Success", selectedAnimal.getName() + " has been deleted.");
+            if (alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
+                removeAnimal(selectedAnimal); // Call the removeAnimal method
+            }
+        } else {
+            // Show an alert if no animal is selected
+            Alert noSelectionAlert = new Alert(Alert.AlertType.WARNING);
+            noSelectionAlert.setTitle("No Selection");
+            noSelectionAlert.setHeaderText("No Animal Selected");
+            noSelectionAlert.setContentText("Please select an animal to delete.");
+            noSelectionAlert.showAndWait();
         }
     }
 
     @FXML
-    protected void onBackButtonClick() {
+    protected void onBackButtonClick(ActionEvent event) {
         Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
         stage.close();
+    }
+
+    /**
+     * Refreshes the animal list in the ListView.
+     */
+    private void refreshAnimalList() {
+        animalList.setAll(enclosure.getAnimals());
+    }
+
+    private void removeAnimal(Animal animal) {
+        if (animal != null && enclosure.getAnimals().contains(animal)) {
+            enclosure.getAnimals().remove(animal); // Remove from enclosure
+            animalList.remove(animal); // Update the ObservableList to refresh the ListView
+        }
     }
 
     private void showAlert(String title, String message) {
@@ -144,4 +161,4 @@ import java.util.Optional;
         alert.setContentText(message);
         alert.showAndWait();
     }
-}*/
+}
